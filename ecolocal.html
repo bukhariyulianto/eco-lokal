@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>OS Peradaban RT/RW</title>
+    
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'] },
+                    colors: {
+                        dark: { bg: '#0f172a', card: '#1e293b', border: '#334155' }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Mencegah Scroll pada body */
+        body, html {
+            margin: 0; padding: 0;
+            width: 100vw; height: 100vh;
+            overflow: hidden; /* TANPA SCROLL */
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+        .dark .glass {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* 3D Flip Card CSS */
+        .perspective { perspective: 1500px; }
+        .transform-style-3d { transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); }
+        .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+        .is-flipped .transform-style-3d { transform: rotateY(180deg); }
+
+        /* Slide Animation for Tabs */
+        .slide-card { opacity: 0; transform: scale(0.95) translateY(10px); pointer-events: none; transition: all 0.4s ease-out; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        .slide-card.active { opacity: 1; transform: scale(1) translateY(0); pointer-events: auto; z-index: 10; }
+        
+        /* Nav Item active state indicator */
+        .nav-indicator { transition: all 0.3s ease; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-dark-bg dark:text-slate-100 transition-colors duration-300 flex flex-col relative">
+
+    <!-- OVERLAY AUDIO & INIT -->
+    <div id="start-overlay" class="absolute inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center text-white transition-opacity duration-500">
+        <div class="w-24 h-24 bg-gradient-to-tr from-brand-500 to-teal-400 rounded-full flex items-center justify-center text-5xl mb-6 shadow-[0_0_40px_rgba(16,185,129,0.5)] animate-bounce">🌍</div>
+        <h1 class="text-2xl font-extrabold text-center mb-2">OS Peradaban Lokal</h1>
+        <p class="text-slate-400 text-center mb-8 max-w-xs text-sm">Modul interaktif tanpa-scroll. Harap nyalakan suara untuk pengalaman optimal.</p>
+        <button onclick="startApp()" class="bg-white text-slate-900 px-8 py-3 rounded-full font-bold hover:scale-105 active:scale-95 transition-transform shadow-xl">Buka Modul</button>
+    </div>
+
+    <!-- BACKGROUND BLOBS -->
+    <div class="absolute top-[-10%] left-[-10%] w-64 h-64 bg-emerald-500/20 rounded-full blur-[80px] pointer-events-none transition-colors duration-700" id="bg-blob-1"></div>
+    <div class="absolute bottom-[10%] right-[-10%] w-64 h-64 bg-blue-500/20 rounded-full blur-[80px] pointer-events-none transition-colors duration-700" id="bg-blob-2"></div>
+
+    <!-- TOP HEADER -->
+    <header class="w-full h-16 flex items-center justify-between px-6 z-20 shrink-0">
+        <div class="flex items-center gap-2">
+            <span class="text-xl">🕌</span>
+            <span class="font-bold text-sm tracking-wide">Ekonomi RT/RW</span>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="toggleSound()" id="sound-btn" class="p-2 rounded-full glass active:scale-90 transition">
+                <i data-lucide="volume-2" class="w-4 h-4"></i>
+            </button>
+            <button onclick="toggleTheme()" class="p-2 rounded-full glass active:scale-90 transition">
+                <i data-lucide="sun" id="theme-icon" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT AREA (Cards Container) -->
+    <main class="flex-1 relative w-full max-w-md mx-auto px-4 perspective" id="cards-container">
+        <!-- Cards will be injected here via JS -->
+    </main>
+
+    <!-- BOTTOM NAVIGATION -->
+    <nav class="w-full max-w-md mx-auto h-20 mb-4 px-4 z-20 shrink-0 flex items-center justify-center">
+        <div class="w-full h-full glass rounded-3xl flex items-center justify-around px-2 relative" id="bottom-nav">
+            <!-- Nav buttons injected via JS -->
+        </div>
+    </nav>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // --- DATA CONTENT ---
+        const pillars = [
+            {
+                id: 'sirkulasi', emoji: '🩸', icon: 'repeat', color: 'rose', title: 'Sirkulasi Harta',
+                subtitle: 'Mencegah Sumbatan',
+                desc: 'Harta ibarat aliran darah. Jika hanya berputar di kalangan kaya, akan terjadi "sumbatan" yang menyebabkan penyakit sosial struktural di masyarakat.',
+                fact: '1% orang terkaya meraup hampir 2/3 dari seluruh kekayaan baru dunia sejak 2020. (Oxfam)',
+                action: '1. Utamakan belanja di warung UMKM milik tetangga.<br><br>2. Pastikan Zakat, Infak, dan Sedekah (ZIS) berputar penuh di lingkungan warga sekitar.'
+            },
+            {
+                id: 'wakaf', emoji: '🌳', icon: 'landmark', color: 'emerald', title: 'Wakaf Mikro',
+                subtitle: 'Infrastruktur Publik',
+                desc: 'Sumber daya publik tidak boleh dimonopoli privat. Wakaf menahan aset pokok agar manfaatnya mengalir abadi tanpa bunga dan utang.',
+                fact: 'Universitas Al-Azhar berdiri mandiri >1.000 tahun murni berkat hasil wakaf publik. Aset wakaf global diestimasi mencapai $1 Triliun. (IsDB)',
+                action: 'Bentuk program <b>Wakaf Produktif RT</b>.<br><br>Aset seperti sumur bor bersama, tenda hajatan, atau ambulans lingkungan didanai warga dan dikunci sebagai aset umum tanpa komersialisasi.'
+            },
+            {
+                id: 'konsumsi', emoji: '📱', icon: 'smartphone', color: 'amber', title: 'Konsumerisme',
+                subtitle: 'Needs vs Wants',
+                desc: 'Algoritma digital menyamarkan Keinginan (Wants) menjadi Kebutuhan (Needs). Warga diubah menjadi sekadar penikmat hiburan demi tren dan gengsi.',
+                fact: 'Dunia membuang 62 juta ton limbah elektronik (E-waste) pada tahun 2022 akibat siklus konsumsi berlebihan. (PBB)',
+                action: '1. Edukasi literasi agar warga tak terjerat pinjol demi gaya hidup.<br><br>2. Buat "Bank Perkakas RT" (bor, tangga, alat cuci) agar warga meminjam, bukan membeli baru.'
+            },
+            {
+                id: 'integritas', emoji: '🤝', icon: 'shield-check', color: 'blue', title: 'Integritas',
+                subtitle: 'Modal Kepercayaan',
+                desc: 'Sistem sehebat apa pun akan hancur tanpa integritas. Peradaban kuat dibangun di atas aturan, kontrol sosial, dan takwa individu.',
+                fact: 'Negara dengan tingkat kepercayaan masyarakat (Trust Index) rendah menderita biaya ekonomi mahal & investasi mandek. (Edelman 2024)',
+                action: 'Bangun <i>Social Trust</i>:<br><br>Transparansi laporan kas RT bulanan lewat WhatsApp, dorong kejujuran akad jual-beli antar tetangga, dan aktifkan kembali Siskamling.'
+            },
+            {
+                id: 'keadilan', emoji: '⚖️', icon: 'scale', color: 'purple', title: 'Keadilan',
+                subtitle: 'Bukan Sekadar Sama Rata',
+                desc: 'Equality (Kesetaraan) berarti membagikan sesuatu sama rata buta. Justice (Keadilan Islam) adalah memenuhi hak pihak sesuai porsi & kebutuhannya.',
+                fact: 'Kesetaraan yang dipaksakan seringkali melahirkan ketidakadilan baru bagi pihak yang secara struktural lebih lemah atau memiliki tanggungan lebih besar.',
+                action: 'Distribusi Bansos/Kurban Proporsional:<br><br>Pengurus tidak membagi sembako "sama rata ke semua rumah", melainkan memprioritaskan warga fakir miskin, lansia, atau janda terdampak.'
+            }
+        ];
+
+        let activeIndex = 0;
+
+        // --- WEB AUDIO API (NO EXTERNAL LIBS) ---
+        let audioCtx;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+        }
+
+        function playSound(type) {
+            if (!soundEnabled || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+
+            if (type === 'tap') { // UI tap
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now); osc.stop(now + 0.1);
+            } else if (type === 'flip') { // Card flip whoosh
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(100, now + 0.2);
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.linearRampToValueAtTime(0.4, now + 0.1);
+                gain.gain.linearRampToValueAtTime(0, now + 0.3);
+                osc.start(now); osc.stop(now + 0.3);
+            } else if (type === 'start') { // Start chime
+                osc.type = 'sine';
+                [523.25, 659.25, 783.99].forEach((freq, i) => {
+                    osc.frequency.setValueAtTime(freq, now + i*0.1);
+                });
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.linearRampToValueAtTime(0, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+            }
+        }
+
+        // --- RENDER UI ---
+        function renderApp() {
+            const container = document.getElementById('cards-container');
+            const nav = document.getElementById('bottom-nav');
+            
+            container.innerHTML = '';
+            nav.innerHTML = '';
+
+            pillars.forEach((p, i) => {
+                // Generate Card
+                const cardHTML = `
+                    <div id="card-${i}" class="slide-card ${i === 0 ? 'active' : ''} h-full py-4 flex flex-col justify-center">
+                        <div class="relative w-full h-[85%] max-h-[500px] perspective group">
+                            <div class="w-full h-full transform-style-3d shadow-xl rounded-[2rem] relative" id="flip-inner-${i}">
+                                
+                                <!-- FRONT OF CARD -->
+                                <div class="absolute inset-0 backface-hidden glass rounded-[2rem] p-6 flex flex-col overflow-hidden border border-${p.color}-500/20">
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="w-12 h-12 bg-${p.color}-100 dark:bg-${p.color}-900/50 rounded-2xl flex items-center justify-center text-2xl shadow-inner">${p.emoji}</div>
+                                        <div class="text-[10px] font-bold tracking-widest uppercase text-${p.color}-500 px-3 py-1 bg-${p.color}-100/50 dark:bg-${p.color}-900/30 rounded-full">Pilar ${i+1}</div>
+                                    </div>
+                                    <h2 class="text-2xl font-extrabold text-slate-800 dark:text-white leading-tight">${p.title}</h2>
+                                    <h3 class="text-sm font-semibold text-${p.color}-500 mb-4">${p.subtitle}</h3>
+                                    
+                                    <div class="flex-1 overflow-y-auto pr-2 mb-4">
+                                        <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed font-medium">${p.desc}</p>
+                                        <div class="mt-4 p-3 bg-white/50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                                            <div class="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-white mb-2">
+                                                <i data-lucide="bar-chart" class="w-3 h-3 text-${p.color}-500"></i> Fakta Nyata
+                                            </div>
+                                            <p class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed italic">"${p.fact}"</p>
+                                        </div>
+                                    </div>
+
+                                    <button onclick="toggleFlip(${i})" class="w-full py-3 bg-${p.color}-500 hover:bg-${p.color}-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shadow-lg shadow-${p.color}-500/30 mt-auto shrink-0">
+                                        <i data-lucide="zap" class="w-4 h-4"></i> Aksi Nyata RT/RW
+                                    </button>
+                                </div>
+
+                                <!-- BACK OF CARD -->
+                                <div class="absolute inset-0 backface-hidden rotate-y-180 bg-slate-900 text-white rounded-[2rem] p-6 flex flex-col overflow-hidden border border-${p.color}-500/50 shadow-[0_0_30px_rgba(0,0,0,0.5)]">
+                                    <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-700">
+                                        <div class="w-10 h-10 bg-${p.color}-500 rounded-full flex items-center justify-center"><i data-lucide="zap" class="w-5 h-5"></i></div>
+                                        <div>
+                                            <h2 class="text-lg font-bold">Aksi ${p.title}</h2>
+                                            <p class="text-xs text-slate-400">Implementasi Pengurus</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex-1 overflow-y-auto text-sm leading-relaxed text-slate-200">
+                                        ${p.action}
+                                    </div>
+                                    <button onclick="toggleFlip(${i})" class="w-full mt-4 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-transform active:scale-95 shrink-0">
+                                        <i data-lucide="rotate-ccw" class="w-4 h-4"></i> Kembali
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += cardHTML;
+
+                // Generate Nav Item
+                const navHTML = `
+                    <button onclick="switchTab(${i})" class="relative flex flex-col items-center justify-center w-14 h-14 rounded-2xl transition-all duration-300 ${i === 0 ? 'scale-110' : 'opacity-60 grayscale'}" id="nav-btn-${i}">
+                        <div class="absolute inset-0 bg-${p.color}-500/20 rounded-2xl nav-indicator scale-0 transition-transform ${i === 0 ? 'scale-100' : ''}" id="nav-bg-${i}"></div>
+                        <i data-lucide="${p.icon}" class="w-5 h-5 relative z-10 ${i === 0 ? `text-${p.color}-500 dark:text-${p.color}-400` : 'text-slate-500'} transition-colors" id="nav-icon-${i}"></i>
+                    </button>
+                `;
+                nav.innerHTML += navHTML;
+            });
+            lucide.createIcons();
+        }
+
+        // --- INTERACTION LOGIC ---
+        function startApp() {
+            initAudio(); playSound('start');
+            const overlay = document.getElementById('start-overlay');
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 500);
+            updateBackgroundBlob(0);
+        }
+
+        function switchTab(index) {
+            if (index === activeIndex) return;
+            initAudio(); playSound('tap');
+
+            // Hide Old
+            document.getElementById(`card-${activeIndex}`).classList.remove('active');
+            document.getElementById(`nav-btn-${activeIndex}`).classList.replace('scale-110', 'opacity-60');
+            document.getElementById(`nav-btn-${activeIndex}`).classList.add('grayscale');
+            document.getElementById(`nav-bg-${activeIndex}`).classList.replace('scale-100', 'scale-0');
+            
+            const oldIcon = document.getElementById(`nav-icon-${activeIndex}`);
+            oldIcon.className = `w-5 h-5 relative z-10 text-slate-500 transition-colors`;
+
+            // Reset flip on old card
+            document.getElementById(`card-${activeIndex}`).classList.remove('is-flipped');
+
+            // Show New
+            activeIndex = index;
+            document.getElementById(`card-${activeIndex}`).classList.add('active');
+            
+            const newBtn = document.getElementById(`nav-btn-${activeIndex}`);
+            newBtn.classList.remove('opacity-60', 'grayscale');
+            newBtn.classList.add('scale-110');
+            document.getElementById(`nav-bg-${activeIndex}`).classList.replace('scale-0', 'scale-100');
+            
+            const p = pillars[activeIndex];
+            const newIcon = document.getElementById(`nav-icon-${activeIndex}`);
+            newIcon.className = `w-5 h-5 relative z-10 text-${p.color}-500 dark:text-${p.color}-400 transition-colors`;
+
+            updateBackgroundBlob(activeIndex);
+        }
+
+        function toggleFlip(index) {
+            initAudio(); playSound('flip');
+            document.getElementById(`card-${index}`).classList.toggle('is-flipped');
+        }
+
+        function updateBackgroundBlob(index) {
+            const colors = ['bg-rose-500/20', 'bg-emerald-500/20', 'bg-amber-500/20', 'bg-blue-500/20', 'bg-purple-500/20'];
+            const blob1 = document.getElementById('bg-blob-1');
+            const blob2 = document.getElementById('bg-blob-2');
+            
+            blob1.className = `absolute top-[-10%] left-[-10%] w-64 h-64 rounded-full blur-[80px] pointer-events-none transition-colors duration-700 ${colors[index]}`;
+            blob2.className = `absolute bottom-[10%] right-[-10%] w-64 h-64 rounded-full blur-[80px] pointer-events-none transition-colors duration-700 ${colors[(index + 1) % colors.length]}`;
+        }
+
+        function toggleSound() {
+            initAudio();
+            soundEnabled = !soundEnabled;
+            const btn = document.getElementById('sound-btn');
+            btn.innerHTML = `<i data-lucide="${soundEnabled ? 'volume-2' : 'volume-x'}" class="w-4 h-4"></i>`;
+            if (soundEnabled) playSound('tap');
+            lucide.createIcons();
+        }
+
+        function toggleTheme() {
+            if (soundEnabled) { initAudio(); playSound('tap'); }
+            const html = document.documentElement;
+            html.classList.toggle('dark');
+            const isDark = html.classList.contains('dark');
+            document.getElementById('theme-icon').setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+            lucide.createIcons();
+        }
+
+        // Init
+        renderApp();
+
+        // Optional: Support Swipe Gestures
+        let touchStartX = 0;
+        let touchEndX = 0;
+        document.getElementById('cards-container').addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+        document.getElementById('cards-container').addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, {passive: true});
+
+        function handleSwipe() {
+            const threshold = 50;
+            // Cek jika kartu sedang di-flip, matikan swipe agar user fokus baca belakang
+            if (document.getElementById(`card-${activeIndex}`).classList.contains('is-flipped')) return;
+
+            if (touchEndX + threshold < touchStartX && activeIndex < pillars.length - 1) {
+                switchTab(activeIndex + 1); // Swipe Left
+            }
+            if (touchEndX - threshold > touchStartX && activeIndex > 0) {
+                switchTab(activeIndex - 1); // Swipe Right
+            }
+        }
+    </script>
+</body>
+</html>
